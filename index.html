@@ -13,25 +13,8 @@
     <script src="data/dataset_1.js"></script>
     <script src="src/main.js"></script>
     <script>
-              
-        function calculateSimpleRevenue(purchase, _product) {
-            const discountRatio = 1 - (purchase.discount / 100);
-            return purchase.sale_price * purchase.quantity * discountRatio;
-        }
+        console.log(data);
 
-        function calculateBonusByProfit(index, total, seller) {
-            const { profit } = seller;
-            if (index === 0) return +(profit * 0.15).toFixed(2);
-            if (index === 1 || index === 2) return +(profit * 0.10).toFixed(2);
-            if (index === total - 1) return 0;
-            return +(profit * 0.05).toFixed(2);
-        }
-
-        // --- Выполнение расчетов ---
-
-        console.log("Исходные данные:", data);
-
-        // Первый блок расчетов
         const specialBonuses = calculateSpecialBonuses(
             data,
             {
@@ -46,23 +29,11 @@
                 bonusStableGrowth
             ]
         );
-      
-        console.log("Специальные бонусы:");
-        console.table(specialBonuses);
 
-        // Второй блок расчетов (основной отчет по продажам)
-        const report = analyzeSalesData(data, {
-            calculateRevenue: calculateSimpleRevenue,
-            calculateBonus: calculateBonusByProfit // Изменил ключ на calculateBonus для соответствия логике Шага 4
-        });
+        //console.log(JSON.stringify(specialBonuses, null, 4));
 
-        console.log("Итоговый отчет по продажам:");
-        if (console.table) {
-            console.table(report);
-        } else {
-            console.log(report);
-        }
+        if (console.table) console.table(specialBonuses);
+        else console.log(specialBonuses);
     </script>
-
 </body>
 </html>
