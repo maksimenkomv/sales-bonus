@@ -16,54 +16,15 @@
     <script src="data/dataset_1.js"></script>
     <script src="src/main.js"></script>
     <script>
-      try {
-        // 1. Считаем базовые показатели
-        const stats = baseMetrics(data.purchase_records, simpleProfit, data.products);
+        console.log(data);
 
-        // 2. Считаем бонусы (фильтруем null/undefined, чтобы не было ошибок)
-        const rawBonuses = calculateSpecialBonuses(
-            data,
-            { calculateProfit: simpleProfit, accumulateMetrics: baseMetrics },
-            [
-                bonusBestCustomer,
-                bonusCustomerRetention,
-                bonusLargestSingleSale,
-                bonusHighestAverageProfit,
-                bonusStableGrowth
-            ]
-        );
-        const specialBonuses = rawBonuses.filter(b => b && b.seller_id !== undefined && b.seller_id !== null);
+        const report = analyzeSalesData(data, {
+            calculateRevenue: calculateSimpleRevenue,
+            calculateBonus: calculateBonusByProfit
+        });
 
-        // 3. Формируем рейтинг
-        const sellerRating = Object.entries(stats.sellers).map(([id, metrics]) => {
-            const sellerId = parseInt(id);
-            const sellerInfo = data.sellers.find(s => s.id === sellerId);
-            const bonusValue = specialBonuses
-                .filter(b => b.seller_id === sellerId)
-                .reduce((sum, b) => sum + (Number(b.bonus) || 0), 0);
-
-            return {
-                id: sellerId,
-                name: sellerInfo ? sellerInfo.name : `ID: ${sellerId}`,
-                profit: Number(metrics.profit.toFixed(2)),
-                bonuses: Number(bonusValue.toFixed(2)),
-                total: Number((metrics.profit + bonusValue).toFixed(2))
-            };
-        }).sort((a, b) => b.total - a.total);
-
-        // 4. Вывод для отладки
-        console.table(specialBonuses);
-        console.table(sellerRating);
-
-        // 5. Глобальные переменные (автотесты ищут их здесь)
-        window.specialBonuses = specialBonuses;
-        window.sellerRating = sellerRating;
-
-    } catch (err) {
-        console.error("Ошибка в расчетах:", err.message);
-        throw err; // Важно для завершения GitHub Actions с ошибкой, если она есть
-    }
-
+        if (console.table) console.table(report);
+        else console.log(report);
     </script>
 </body>
 </html>
