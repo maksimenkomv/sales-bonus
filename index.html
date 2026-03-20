@@ -9,12 +9,19 @@
 </head>
 <body>
     <h1>Анализ продаж магазина</h1>
+<!--По собранным в датасете данным о продажах 
+в магазине необходимо составить рейтинг продавцов 
+по доходности и рассчитать бонусы для каждого продавца.-->
 
     <script src="data/dataset_1.js"></script>
     <script src="src/main.js"></script>
     <script>
         console.log(data);
-
+    
+        // 1. Вычисляем базовые метрики (доходность по продажам)
+        const stats = baseMetrics(data.purchase_records, simpleProfit, data.products);
+    
+        // 2. Вычисляем специальные бонусы
         const specialBonuses = calculateSpecialBonuses(
             data,
             {
@@ -29,11 +36,34 @@
                 bonusStableGrowth
             ]
         );
-
-        //console.log(JSON.stringify(specialBonuses, null, 4));
-
-        if (console.table) console.table(specialBonuses);
-        else console.log(specialBonuses);
+    
+        // 3. Формируем итоговый рейтинг продавцов
+        const sellerRating = Object.entries(stats.sellers).map(([id, metrics]) => {
+            const sellerId = parseInt(id);
+            const sellerInfo = data.sellers.find(s => s.id === sellerId);
+            
+            // Суммируем все бонусы для конкретного продавца
+            const totalBonuses = specialBonuses
+                .filter(b => b.seller_id === sellerId)
+                .reduce((sum, b) => sum + (b.bonus || 0), 0);
+    
+            return {
+                id: sellerId,
+                name: sellerInfo ? sellerInfo.name : `ID: ${sellerId}`,
+                salesProfit: +metrics.profit.toFixed(2),
+                bonusAmount: +totalBonuses.toFixed(2),
+                totalProfit: +(metrics.profit + totalBonuses).toFixed(2),
+                itemsSold: metrics.items.length
+            };
+        }).sort((a, b) => b.totalProfit - a.totalProfit); // Сортировка по доходности
+    
+        // Вывод результатов
+        console.log("Специальные бонусы:");
+        console.table(specialBonuses);
+    
+        console.log("Итоговый рейтинг продавцов по доходности:");
+        console.table(sellerRating);
     </script>
+    
 </body>
 </html>
