@@ -19,7 +19,7 @@
         try {
             console.log("Входные данные:", data);
     
-            // 1. Расчет бонусов с защитой от пустых результатов функций
+            // 1. Расчет бонусов с фильтрацией пустых значений (если бонус не начислен)
             const rawBonuses = calculateSpecialBonuses(
                 data,
                 { calculateProfit: simpleProfit, accumulateMetrics: baseMetrics },
@@ -32,18 +32,18 @@
                 ]
             );
     
-            // Фильтруем пустые бонусы (если условие не выполнено, функция может вернуть null)
+            // Убираем null/undefined результаты, чтобы не было ошибок при обращении к свойствам
             const specialBonuses = rawBonuses.filter(b => b && b.seller_id !== undefined);
     
-            // 2. Получаем базовую статистику
+            // 2. Получаем базовую статистику по продажам
             const stats = baseMetrics(data.purchase_records, simpleProfit, data.products);
     
-            // 3. Собираем итоговый рейтинг
+            // 3. Формируем итоговый рейтинг
             const sellerRating = Object.entries(stats.sellers).map(([id, metrics]) => {
                 const sellerId = parseInt(id);
                 const sellerInfo = data.sellers.find(s => s.id === sellerId);
                 
-                // Считаем бонусы для конкретного продавца (безопасно)
+                // Суммируем бонусы только для текущего продавца
                 const sellerBonusesValue = specialBonuses
                     .filter(b => b.seller_id === sellerId)
                     .reduce((sum, b) => sum + (Number(b.bonus) || 0), 0);
@@ -57,20 +57,20 @@
                 };
             }).sort((a, b) => b.total - a.total);
     
-            // ВЫВОД РЕЗУЛЬТАТОВ (важно для логов CI/CD)
+            // 4. Вывод данных в консоль
             console.log("Special Bonuses Table:");
             console.table(specialBonuses);
     
             console.log("Final Profit Rating:");
             console.table(sellerRating);
     
-            // Экспортируем для автотестов репозитория
+            // 5. Экспорт в глобальную область (необходимо для прохождения тестов в CI/CD)
             window.specialBonuses = specialBonuses;
             window.sellerRating = sellerRating;
     
         } catch (err) {
-            console.error("Ошибка в логике расчетов:", err.message);
-            // Выбрасываем ошибку, чтобы CI/CD зафиксировал падение, если оно реально
+            console.error("Критическая ошибка в логике расчетов:", err.message);
+            // Выбрасываем ошибку дальше, чтобы GitHub Actions увидел "exit code 1" в случае сбоя
             throw err;
         }
     </script>
