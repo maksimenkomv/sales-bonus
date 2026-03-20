@@ -16,19 +16,13 @@
     <script src="data/dataset_1.js"></script>
     <script src="src/main.js"></script>
     <script>
-        console.log("Исходные данные:", data);
-    
         try {
-            // 1. Предварительный расчет базовых метрик
-            const stats = baseMetrics(data.purchase_records, simpleProfit, data.products);
+            console.log("Входные данные:", data);
     
-            // 2. Вычисление бонусов по специальным условиям
-            const specialBonuses = calculateSpecialBonuses(
+            // 1. Расчет бонусов с защитой от пустых результатов функций
+            const rawBonuses = calculateSpecialBonuses(
                 data,
-                {
-                    calculateProfit: simpleProfit,
-                    accumulateMetrics: baseMetrics,
-                },
+                { calculateProfit: simpleProfit, accumulateMetrics: baseMetrics },
                 [
                     bonusBestCustomer,
                     bonusCustomerRetention,
@@ -38,39 +32,46 @@
                 ]
             );
     
-            // 3. Формирование итогового рейтинга по доходности
+            // Фильтруем пустые бонусы (если условие не выполнено, функция может вернуть null)
+            const specialBonuses = rawBonuses.filter(b => b && b.seller_id !== undefined);
+    
+            // 2. Получаем базовую статистику
+            const stats = baseMetrics(data.purchase_records, simpleProfit, data.products);
+    
+            // 3. Собираем итоговый рейтинг
             const sellerRating = Object.entries(stats.sellers).map(([id, metrics]) => {
                 const sellerId = parseInt(id);
                 const sellerInfo = data.sellers.find(s => s.id === sellerId);
                 
-                // Фильтруем бонусы для текущего продавца и суммируем их
-                const currentSellerBonuses = specialBonuses.filter(b => b && b.seller_id === sellerId);
-                const totalBonusValue = currentSellerBonuses.reduce((sum, b) => sum + (Number(b.bonus) || 0), 0);
+                // Считаем бонусы для конкретного продавца (безопасно)
+                const sellerBonusesValue = specialBonuses
+                    .filter(b => b.seller_id === sellerId)
+                    .reduce((sum, b) => sum + (Number(b.bonus) || 0), 0);
     
                 return {
-                    "ID": sellerId,
-                    "Продавец": sellerInfo ? sellerInfo.name : `ID: ${sellerId}`,
-                    "Чистая прибыль": +metrics.profit.toFixed(2),
-                    "Сумма бонусов": +totalBonusValue.toFixed(2),
-                    "Итоговый доход": +(metrics.profit + totalBonusValue).toFixed(2),
-                    "Кол-во чеков": metrics.items.length
+                    id: sellerId,
+                    name: sellerInfo ? sellerInfo.name : `Seller ${sellerId}`,
+                    profit: Number(metrics.profit.toFixed(2)),
+                    bonuses: Number(sellerBonusesValue.toFixed(2)),
+                    total: Number((metrics.profit + sellerBonusesValue).toFixed(2))
                 };
-            }).sort((a, b) => b["Итоговый доход"] - a["Итоговый доход"]);
+            }).sort((a, b) => b.total - a.total);
     
-            // 4. Вывод результатов
-            console.log("Расчитанные бонусы:");
+            // ВЫВОД РЕЗУЛЬТАТОВ (важно для логов CI/CD)
+            console.log("Special Bonuses Table:");
             console.table(specialBonuses);
     
-            console.log("Рейтинг продавцов по доходности (Прибыль + Бонусы):");
+            console.log("Final Profit Rating:");
             console.table(sellerRating);
     
-            // Сохраняем результат в глобальную область для тестов, если нужно
-            window.finalSellerRating = sellerRating;
+            // Экспортируем для автотестов репозитория
+            window.specialBonuses = specialBonuses;
+            window.sellerRating = sellerRating;
     
-        } catch (error) {
-            console.error("Ошибка при расчете рейтинга:", error.message);
-            // Выбрасываем ошибку для корректной остановки автотестов в CI
-            throw error;
+        } catch (err) {
+            console.error("Ошибка в логике расчетов:", err.message);
+            // Выбрасываем ошибку, чтобы CI/CD зафиксировал падение, если оно реально
+            throw err;
         }
     </script>
     
